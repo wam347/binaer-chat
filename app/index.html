@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Binär-Chat – Rollenspiel</title>
+<style>
+  :root{
+    --gruen: rgb(220,255,190);
+    --blau: rgb(25,150,240);
+    --grau: rgb(230,230,235);
+    --dunkel: #2d3640;
+    --rot: #d64545;
+    --ok: #2e9d4f;
+    --gelb: #fff4c2;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:17px;color:var(--dunkel);background:#f4f6f8}
+  button{font-family:inherit;font-size:1rem;cursor:pointer;border:none;border-radius:10px;padding:10px 18px;background:var(--grau);color:var(--dunkel);font-weight:bold;touch-action:manipulation}
+  button:hover{background:var(--blau);color:#fff}
+  button.primaer{background:var(--blau);color:#fff}
+  button.primaer:hover{filter:brightness(1.1)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  button:disabled:hover{background:var(--grau);color:var(--dunkel)}
+  button.link{background:none;color:#677;padding:4px;font-weight:normal;text-decoration:underline}
+  button.link:hover{color:var(--blau);background:none}
+  input[type=text]{font:inherit;font-size:1.2rem;padding:10px 14px;border:2px solid #bbb;border-radius:10px;width:100%}
+  input[type=text]:focus{outline:none;border-color:var(--blau)}
+  textarea{font:inherit;width:100%;min-height:90px;padding:10px;border:2px solid #ccc;border-radius:10px;resize:vertical}
+  .bits{font-family:Consolas,"Courier New",monospace;letter-spacing:.08em}
+
+  #kopf{background:var(--dunkel);color:#fff;padding:10px 18px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+  #kopf h1{font-size:1.3rem;margin:0;flex:1}
+  #kopf .info{font-size:.95rem;opacity:.9}
+  #kopf .rolleBadge{background:var(--blau);border-radius:8px;padding:3px 10px;font-weight:bold}
+  #online{width:12px;height:12px;border-radius:50%;background:#888;display:inline-block}
+  #online.an{background:#5fd35f}
+  #online.aus{background:var(--rot)}
+
+  main{max-width:900px;margin:0 auto;padding:20px}
+  .karte{background:#fff;border-radius:16px;padding:22px 26px;box-shadow:0 2px 10px rgba(0,0,0,.08);margin-bottom:18px}
+  .karte h2{margin-top:0}
+  .hinweis{background:var(--gelb);border-left:5px solid #e0b400;padding:10px 14px;border-radius:8px;margin:12px 0}
+  .zeile{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  ol.regeln li, ul.fragen li{margin-bottom:6px}
+  .klein{font-size:.9rem;color:#667}
+
+  /* Rollenkarte */
+  .rollenkarte{border:3px solid var(--dunkel);border-radius:14px;overflow:hidden;max-width:520px}
+  .rollenkarte .rk-kopf{background:var(--dunkel);color:#fff;padding:10px 16px;font-size:1.3rem;font-weight:bold}
+  .rollenkarte table{width:100%;border-collapse:collapse}
+  .rollenkarte td{padding:8px 14px;border-top:1px solid #ddd;vertical-align:top}
+  .rollenkarte tr.aktiv td{background:#e7f3ff;font-weight:bold}
+  .rollenkarte td.r{white-space:nowrap;width:90px}
+
+  /* Lobby */
+  .teilnehmer{display:flex;gap:10px;margin:14px 0}
+  .teilnehmer span{width:54px;height:54px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:bold;background:var(--grau);color:#999}
+  .teilnehmer span.da{background:var(--blau);color:#fff}
+  .teilnehmer span.ich{outline:4px solid #e0b400}
+  .grossrolle{font-size:4rem;font-weight:bold;color:var(--blau);line-height:1}
+
+  /* Chat */
+  #chatSeite{display:flex;flex-direction:column;height:calc(100vh - 52px)}
+  #aufgaben{background:#fff;border-bottom:1px solid #ccc;padding:8px 18px;display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+  #aufgaben .auf{background:#e7f3ff;border-radius:8px;padding:5px 10px}
+  #aufgaben .auf.erledigt{background:#dff3e4;color:var(--ok)}
+  #verlauf{flex:1;overflow-y:auto;background:var(--gruen);padding:10px 20px}
+  .blase{border-radius:22px;padding:10px 18px;margin:10px 0;font-weight:bold;font-size:1.45rem;overflow-wrap:anywhere;max-width:75%}
+  .blase.fremd{background:var(--grau);margin-right:auto}
+  .blase.eigen{background:var(--blau);color:#fff;margin-left:auto}
+  .wrap-fremd{display:flex;flex-direction:column;align-items:flex-start}
+  .wrap-eigen{display:flex;flex-direction:column;align-items:flex-end}
+  .notiz{font-size:.85rem;font-weight:normal;margin:-4px 0 6px 12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .notiz select{font:inherit;padding:2px 4px;border-radius:6px}
+  .meta{font-size:.75rem;color:#666;margin:-6px 12px 0}
+  #eingabeLeiste{background:#888;padding:10px 18px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #eingabe{flex:1;min-width:180px;min-height:52px;background:#fff;border-radius:25px;padding:10px 20px;font-size:1.45rem;font-weight:bold;display:flex;align-items:center;justify-content:space-between}
+  #eingabe .zaehler{font-size:.8rem;color:#999;font-weight:normal;font-family:Calibri,Arial}
+  .tasten button{width:56px;height:52px;font-size:1.5rem;padding:0}
+  .tasten button.senden{width:auto;padding:0 18px;font-size:1.1rem}
+
+  /* Pause / Übersicht */
+  .status{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+  .status span{padding:6px 12px;border-radius:8px;background:var(--grau)}
+  .status span.fertig{background:#dff3e4;color:var(--ok);font-weight:bold}
+  .tipp{display:none;background:#eef7ff;border-left:5px solid var(--blau);padding:10px 14px;border-radius:8px;margin-top:10px}
+  .tipp.offen{display:block}
+  table.uebersicht{width:100%;border-collapse:collapse;margin:8px 0 14px}
+  table.uebersicht th,table.uebersicht td{border:1px solid #ccc;padding:6px 10px;text-align:left}
+  table.uebersicht th{background:#eef1f4}
+  .richtig{color:var(--ok);font-weight:bold}
+  .falsch{color:var(--rot);font-weight:bold}
+  .loesung{display:none}
+  body.aufgeloest .loesung{display:block}
+  body.aufgeloest td.loesung, body.aufgeloest th.loesung{display:table-cell}
+  td.loesung, th.loesung{display:none}
+  .rahmen span{padding:1px 3px;border-radius:4px}
+  .rahmen .abs{background:#ffe0b3}
+  .rahmen .emp{background:#cfe8ff}
+  .rahmen .dat{background:#e6e6e6}
+
+  @media print{
+    #kopf button, .keinDruck{display:none !important}
+    body{background:#fff}
+    .karte{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
+  }
+  @media (max-width:600px){
+    main{padding:10px}
+    .karte{padding:16px}
+    .blase{font-size:1.2rem;max-width:92%}
+    .tasten button{width:48px}
+  }
+</style>
+</head>
+<body>
+<div id="kopf">
+  <h1>Binär-Chat – Rollenspiel</h1>
+  <span class="info" id="kopfInfo"></span>
+  <span id="online" title="Verbindung"></span>
+</div>
+<div id="app"></div>
+
+<script>
+/* ================================================================
+   KONFIGURATION
+   ================================================================ */
+// Pfad zum Chat-Server (liegt im selben Ordner wie die Original-App)
+const API = "update.php";
+
+const ROLLEN = ["A","B","C","D"];
+const ADRESSE = {A:"00", B:"01", C:"10", D:"11"};
+const RUNDEN = 4;
+
+// Rollenkarten: je Runde eine Liste [Daten, Empfänger]
+const KARTEN = {
+  A: [ [["01010011","C"],["00100111","D"]], [["00100111","D"]], [["01010110","B"]], [["10111011","C"]] ],
+  B: [ [["10101101","A"]], [["00100010","C"]], [["10110001","A"],["00010110","A"]], [["10110111","D"]] ],
+  C: [ [["00101100","B"]], [["00100101","B"]], [["01101101","D"]], [["10000011","A"],["00111110","D"]] ],
+  D: [ [["11011101","C"]], [["10001001","A"],["01010001","B"]], [["00110110","C"]], [["10111110","B"]] ]
+};
+// Formulierung auf der Rollenkarte je Runde
+const VERB = ["für","an","an","an"];
+
+// Leitfragen und Tipps für die Besprechung nach jeder Runde
+const BESPRECHUNG = {
+  1: { fragen: [
+        "Welche Nachrichten habt ihr empfangen? Vergleicht eure Mitschriften (nicht die Rollenkarten!).",
+        "Konntet ihr erkennen, <b>für wen</b> eine Nachricht bestimmt war?",
+        "Konntet ihr erkennen, <b>von wem</b> eine Nachricht kam?",
+        "Welches Problem ist aufgetreten und wie könntet ihr es lösen?"],
+       tipp: "Überlegt, welche Information ihr <i>zusätzlich</i> zu den 8 Datenbits mitschicken müsstet, damit jeder sofort weiß, ob die Nachricht für ihn ist." },
+  2: { fragen: [
+        "Hat eure Lösungsidee funktioniert? Wusste jeder Empfänger, dass eine Nachricht für ihn war?",
+        "Ihr dürft nur 0 und 1 senden. Wie könnt ihr die vier Teilnehmer mit möglichst wenigen Bits unterscheiden?",
+        "Wo genau in der Nachricht steht diese Zusatzinformation – und woran erkennt der Empfänger, wo die Daten anfangen?"],
+       tipp: "Vier Teilnehmer = vier verschiedene Zustände. Mit wie vielen Bits kann man vier Zustände darstellen? Vereinbart für jeden Teilnehmer eine feste Adresse und stellt sie <i>vor</i> die Daten." },
+  3: { fragen: [
+        "Konnte jeder Empfänger seine Nachrichten sicher erkennen?",
+        "Wusste der Empfänger auch, <b>von wem</b> die Nachricht stammt? Was wäre, wenn er antworten möchte?",
+        "Wie sieht euer Nachrichtenformat jetzt aus? Schreibt es als Schema auf, z. B. [ … | … | Daten ]."],
+       tipp: "Ergänzt neben der Empfängeradresse auch die Absenderadresse, z. B. <span class='bits'>[Absender 2 Bit | Empfänger 2 Bit | Daten 8 Bit]</span>. Alle müssen sich an dieselbe Reihenfolge halten!" },
+  4: { fragen: [
+        "Hat euer Nachrichtenformat in Runde 4 für alle Nachrichten funktioniert?",
+        "Ihr habt gemeinsam Regeln für die Kommunikation vereinbart. Wie nennt man solche Regeln in der IT?",
+        "Wo begegnen euch Absender- und Empfängeradressen in echten Netzwerken?"],
+       tipp: "Ein <b>Protokoll</b> legt das Format einer Nachricht fest. In echten Netzwerken stehen z. B. im Ethernet-Frame die Ziel- und Quell-MAC-Adresse und im IP-Header die Quell- und Ziel-IP-Adresse vor den eigentlichen Nutzdaten." }
+};
+
+/* ================================================================
+   HILFSFUNKTIONEN
+   ================================================================ */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uhrzeit = t => new Date(t).toLocaleTimeString("de-DE",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+
+const speicher = (() => {
+  const mem = {};
+  return {
+    get(k){ try{ return localStorage.getItem(k); }catch(e){ return mem[k] ?? null; } },
+    set(k,v){ try{ localStorage.setItem(k,v); }catch(e){ mem[k]=v; } },
+    del(k){ try{ localStorage.removeItem(k); }catch(e){ delete mem[k]; } }
+  };
+})();
+
+let ID = speicher.get("bc_id");
+if(!ID){ ID = Math.random().toString(36).slice(2,10) + Date.now().toString(36).slice(-4); speicher.set("bc_id", ID); }
+
+function aufgaben(rolle, runde){
+  return KARTEN[rolle][runde-1].map(([d,an]) => ({d, an}));
+}
+function loesung(runde){
+  const l = [];
+  for(const s of ROLLEN) for(const [d,an] of KARTEN[s][runde-1]) l.push({von:s, an, d});
+  return l;
+}
+function rahmenHTML(von, an, d){
+  return `<span class="rahmen bits"><span class="abs" title="Absender ${von}">${ADRESSE[von]}</span><span class="emp" title="Empfänger ${an}">${ADRESSE[an]}</span><span class="dat">${d}</span></span>`;
+}
+function kanalName(roh){
+  return roh.toLowerCase().trim().replace(/ä/g,"ae").replace(/ö/g,"oe").replace(/ü/g,"ue").replace(/ß/g,"ss")
+            .replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"").slice(0,40);
+}
+
+/* ================================================================
+   ZUSTAND
+   ================================================================ */
+let S = null;   // Spielstand der aktuellen Gruppe
+function neuerZustand(gruppe){
+  return {gruppe, rolle:null, runde:1, phase:"lobby", tc:{}, log:{}, notizen:{}};
+}
+function sichern(){ if(S){ speicher.set("bc_g_"+S.gruppe, JSON.stringify(S)); speicher.set("bc_aktiv", S.gruppe); } }
+function laden(gruppe){ try{ return JSON.parse(speicher.get("bc_g_"+gruppe)); }catch(e){ return null; } }
+const steuerKanal = () => S.gruppe + "__steuerung";
+const rundenKanal = n => S.gruppe + "__runde" + n;
+
+function kopfAktualisieren(){
+  if(!S || !S.rolle){ $("#kopfInfo").innerHTML = S ? `Gruppe: <b>${esc(S.gruppe)}</b>` : ""; return; }
+  const r = S.phase === "ende" ? "Auswertung" : `Runde ${S.runde}/${RUNDEN}`;
+  $("#kopfInfo").innerHTML = `Gruppe: <b>${esc(S.gruppe)}</b> · ${r} · <span class="rolleBadge">Teilnehmer ${S.rolle}</span>`;
+}
+function setOnline(z){ const o=$("#online"); o.className = z===null ? "" : (z ? "an" : "aus"); o.title = z ? "verbunden" : "keine Verbindung"; }
+
+/* ================================================================
+   SERVER-KOMMUNIKATION  (kompatibel mit update.php des Original-Chats)
+   ================================================================ */
+async function anfrage(kanal, tc, nachricht, signal){
+  const url = `${API}?kanal=${encodeURIComponent(kanal)}&timecode=${encodeURIComponent(tc)}&nachricht=${encodeURIComponent(nachricht||"")}`;
+  const r = await fetch(url, {cache:"no-store", signal});
+  if(!r.ok) throw new Error("HTTP " + r.status);
+  return r.json();
+}
+
+let GEN = 0, ABBRUCH = null, AUSGANG = [];
+function stoppeSchleife(){ GEN++; if(ABBRUCH) ABBRUCH.abort(); }
+
+/* Dauerschleife: Nachrichten abholen, wartende eigene Nachrichten senden.
+   Anfragen laufen nacheinander, damit eigene Nachrichten nie als fremde zurückkommen. */
+function starteSchleife(kanal, holeTc, setzeTc, beiNachrichten){
+  const g = ++GEN;
+  (async () => {
+    while(g === GEN){
+      const msg = AUSGANG[0] || "";
+      ABBRUCH = new AbortController();
+      const t = setTimeout(() => ABBRUCH && ABBRUCH.abort(), msg ? 8000 : 15000);
+      try{
+        const j = await anfrage(kanal, holeTc(), msg, ABBRUCH.signal);
+        clearTimeout(t);
+        if(g !== GEN) return;
+        if(msg) AUSGANG.shift();
+        setzeTc(String(j.timecode));
+        if(j.nachrichten && j.nachrichten.length) beiNachrichten(j.nachrichten);
+        setOnline(true);
+      }catch(e){
+        clearTimeout(t);
+        if(g !== GEN) return;
+        if(e.name === "AbortError") continue;          // neue eigene Nachricht wartet -> sofort weiter
+        setOnline(false);
+        await sleep(1500);
+      }
+    }
+  })();
+}
+function senden(text){
+  AUSGANG.push(text);
+  if(AUSGANG.length === 1 && ABBRUCH) ABBRUCH.abort(); // laufende Abfrage abbrechen, damit sofort gesendet wird
+}
+
+/* Steuer-Kanal (Beitritt + "Runde fertig"), unsichtbar für die Schüler */
+let STEUER = {beitritte:[], fertig:{}};
+function starteSteuerSchleife(beiAenderung){
+  STEUER = {beitritte:[], fertig:{}};
+  let tc = "1";          // gesamten Verlauf holen
+  starteSchleife(steuerKanal(), () => tc, v => tc = v, msgs => {
+    for(const m of msgs){
+      const t = String(m).split(" ");
+      if(t[0] === "JOIN" && t[1] && !STEUER.beitritte.includes(t[1])) STEUER.beitritte.push(t[1]);
+      if(t[0] === "DONE" && t[1] && t[2]){ (STEUER.fertig[t[1]] ||= new Set()).add(t[2]); }
+    }
+    beiAenderung();
+  });
+  beiAenderung();
+}
+
+/* ================================================================
+   SEITE 1: EINLEITUNG
+   ================================================================ */
+function zeigeStart(){
+  stoppeSchleife(); setOnline(null);
+  S = null; kopfAktualisieren();
+  const aktiv = speicher.get("bc_aktiv");
+  const alt = aktiv ? laden(aktiv) : null;
+  $("#app").innerHTML = `
+  <main>
+    <div class="karte">
+      <h2>Willkommen zum Rollenspiel „Binär-Chat“</h2>
+      <p>Ihr arbeitet in Gruppen zu je <b>4 Teilnehmern</b>. Alle Teilnehmer einer Gruppe sind im selben Chat-Kanal – jeder sieht also jede Nachricht.
+      Ihr dürft nur <b>Nullen und Einsen</b> senden.</p>
+      <h3>So läuft es ab</h3>
+      <ol class="regeln">
+        <li>Legt in der Gruppe einen <b>gemeinsamen Gruppennamen</b> fest und gebt ihn unten ein. Jeder bekommt automatisch eine <b>Rollenkarte</b> (A, B, C oder D).</li>
+        <li>In jeder Runde sendet jeder für sich die Nachrichten von seiner Rollenkarte in den Chat.</li>
+        <li>Achtet auf die empfangenen Nachrichten und notiert direkt im Chat, <b>von wem</b> und <b>für wen</b> sie eurer Meinung nach waren.</li>
+        <li>Nach jeder Runde setzt ihr euch zusammen, besprecht die Probleme und entwickelt Lösungsideen. Diese probiert ihr in der nächsten Runde aus.</li>
+        <li><b>Ziel:</b> Am Ende aller 4 Runden wisst ihr, welche Nachricht von wem für wen war.</li>
+      </ol>
+      <div class="hinweis">
+        <b>Wichtig:</b> Die Rollenkarten dürfen <b>nicht</b> untereinander verglichen werden.
+        Während einer laufenden Chat-Runde dürft ihr nur über den Chat kommunizieren – sonst herrscht <b>Funkstille</b>!
+      </div>
+    </div>
+
+    ${alt && alt.rolle ? `
+    <div class="karte">
+      <h3>Weitermachen?</h3>
+      <p>Du bist bereits in der Gruppe <b>${esc(alt.gruppe)}</b> als Teilnehmer <b>${alt.rolle}</b> (${alt.phase==="ende" ? "Auswertung" : "Runde "+alt.runde}).</p>
+      <button class="primaer" id="weiter">Weitermachen</button>
+    </div>` : ""}
+
+    <div class="karte">
+      <h3>Gruppe beitreten</h3>
+      <div class="zeile">
+        <input type="text" id="gruppe" placeholder="Gruppenname, z. B. gruppe3-montag" maxlength="40" style="flex:1;min-width:220px">
+        <button class="primaer" id="beitreten">Beitreten</button>
+      </div>
+      <p class="klein">Tipp: Wählt einen eindeutigen Namen (z. B. mit Datum), damit sich keine fremde Gruppe in euren Kanal verirrt.
+      Groß-/Kleinschreibung spielt keine Rolle.</p>
+      <p class="falsch" id="startFehler"></p>
+    </div>
+  </main>`;
+  const go = () => {
+    const name = kanalName($("#gruppe").value);
+    if(name.length < 3){ $("#startFehler").textContent = "Bitte einen Gruppennamen mit mindestens 3 Zeichen eingeben."; return; }
+    beitreten(name);
+  };
+  $("#beitreten").onclick = go;
+  $("#gruppe").onkeydown = e => { if(e.key === "Enter") go(); };
+  if($("#weiter")) $("#weiter").onclick = () => { S = alt; phaseAnzeigen(); };
+  $("#gruppe").focus();
+}
+
+async function beitreten(gruppe){
+  S = laden(gruppe) || neuerZustand(gruppe);
+  sichern();
+  if(!S.rolle){
+    $("#app").innerHTML = `<main><div class="karte"><h2>Verbinde mit Gruppe „${esc(gruppe)}“ …</h2></div></main>`;
+    try{ await anfrage(steuerKanal(), "0", "JOIN " + ID); setOnline(true); }
+    catch(e){ setOnline(false); zeigeStart(); $("#startFehler").textContent = "Keine Verbindung zum Chat-Server. Liegt die Datei im selben Ordner wie update.php?"; return; }
+  }
+  phaseAnzeigen();
+}
+
+function phaseAnzeigen(){
+  kopfAktualisieren();
+  if(S.phase === "lobby") zeigeLobby();
+  else if(S.phase === "chat") zeigeChat();
+  else if(S.phase === "pause") zeigePause();
+  else zeigeUebersicht();
+}
+
+/* ================================================================
+   SEITE 2: LOBBY + ROLLENKARTE
+   ================================================================ */
+function rollenkarteHTML(rolle, aktiveRunde){
+  let z = "";
+  for(let r = 1; r <= RUNDEN; r++){
+    const t = aufgaben(rolle, r).map(a => `sende <span class="bits">${a.d}</span> ${VERB[r-1]} <b>${a.an}</b>`).join(",<br>");
+    z += `<tr class="${r===aktiveRunde?"aktiv":""}"><td class="r">Runde ${r}:</td><td>${t}</td></tr>`;
+  }
+  return `<div class="rollenkarte"><div class="rk-kopf">Rollenkarte ${rolle}</div><table>${z}</table></div>`;
+}
+
+function zeigeLobby(){
+  $("#app").innerHTML = `
+  <main>
+    <div class="karte" id="lobby">
+      <h2>Gruppe „${esc(S.gruppe)}“</h2>
+      <div id="lobbyInhalt">Warte auf Rückmeldung vom Server …</div>
+    </div>
+    <div class="zeile keinDruck"><button class="link" id="verlassen">Gruppe verlassen</button></div>
+  </main>`;
+  $("#verlassen").onclick = verlassen;
+  let neuGesendet = false;
+  starteSteuerSchleife(() => {
+    const idx = STEUER.beitritte.indexOf(ID);
+    const box = $("#lobbyInhalt"); if(!box) return;
+    if(idx < 0){
+      if(STEUER.beitritte.length && !neuGesendet){ neuGesendet = true; anfrage(steuerKanal(),"0","JOIN "+ID).catch(()=>{}); }
+      box.innerHTML = "Melde mich in der Gruppe an …"; return;
+    }
+    if(idx >= ROLLEN.length){
+      box.innerHTML = `<p class="falsch">Diese Gruppe ist bereits voll (4 Teilnehmer).</p><p>Bitte wählt einen anderen Gruppennamen.</p>
+        <button class="primaer" id="zurueck">Zurück</button>`;
+      $("#zurueck").onclick = verlassen; return;
+    }
+    if(!S.rolle){ S.rolle = ROLLEN[idx]; sichern(); kopfAktualisieren(); }
+    const anzahl = Math.min(STEUER.beitritte.length, 4);
+    const kacheln = ROLLEN.map((r,i) => `<span class="${i<anzahl?"da":""} ${r===S.rolle?"ich":""}">${i<anzahl?r:"?"}</span>`).join("");
+    box.innerHTML = `
+      <div class="zeile" style="gap:30px;align-items:flex-start">
+        <div>
+          <p>Du bist Teilnehmer</p>
+          <div class="grossrolle">${S.rolle}</div>
+          <p>Teilnehmer in der Gruppe: <b>${anzahl}/4</b></p>
+          <div class="teilnehmer">${kacheln}</div>
+        </div>
+        <div style="flex:1;min-width:260px">${rollenkarteHTML(S.rolle, 1)}</div>
+      </div>
+      <div class="hinweis">Zeige deine Rollenkarte niemandem! Sie gilt nur für dich.</div>
+      ${anzahl < 4 ? `<p>Warte, bis alle 4 Teilnehmer beigetreten sind …</p>` : `<p class="richtig">Alle 4 Teilnehmer sind da. Ab jetzt herrscht Funkstille!</p>`}
+      <div class="zeile">
+        <button class="primaer" id="start" ${anzahl<4?"disabled":""}>Runde 1 starten</button>
+        ${anzahl<4 ? `<button class="link" id="startTrotzdem">trotzdem starten</button>` : ""}
+      </div>`;
+    const los = () => { S.phase = "chat"; S.runde = 1; sichern(); phaseAnzeigen(); };
+    $("#start").onclick = los;
+    if($("#startTrotzdem")) $("#startTrotzdem").onclick = () => { if(confirm("Es sind noch nicht alle 4 Teilnehmer da. Trotzdem starten?")) los(); };
+  });
+}
+
+function verlassen(){
+  if(S && S.rolle && !confirm("Gruppe wirklich verlassen? Dein Spielstand auf diesem Gerät wird gelöscht.")) return;
+  if(S){ speicher.del("bc_g_"+S.gruppe); }
+  speicher.del("bc_aktiv");
+  zeigeStart();
+}
+
+/* ================================================================
+   SEITE 3: CHAT-RUNDE
+   ================================================================ */
+let EINGABE = "";
+function logRunde(){ return (S.log[S.runde] ||= []); }
+
+function zeigeChat(){
+  kopfAktualisieren();
+  EINGABE = "";
+  AUSGANG = [];
+  $("#app").innerHTML = `
+  <div id="chatSeite">
+    <div id="aufgaben"></div>
+    <div id="verlauf"><p class="klein" style="text-align:center">Runde ${S.runde} – Kanal der Gruppe „${esc(S.gruppe)}“. Sende die Nachrichten von deiner Rollenkarte.</p></div>
+    <div id="eingabeLeiste">
+      <div id="eingabe"><span class="bits" id="eingabeText"></span><span class="zaehler" id="zaehler">0 Bit</span></div>
+      <div class="tasten zeile">
+        <button id="b0">0</button><button id="b1">1</button><button id="bBs" title="Löschen">⌫</button>
+        <button class="senden primaer" id="bSenden">Senden ⇪</button>
+      </div>
+      <button id="bEnde" style="margin-left:auto">Runde beenden</button>
+    </div>
+  </div>`;
+  aufgabenZeichnen();
+  for(const e of logRunde()) blaseZeichnen(e);
+  $("#b0").onclick = () => tippe("0");
+  $("#b1").onclick = () => tippe("1");
+  $("#bBs").onclick = () => { EINGABE = EINGABE.slice(0,-1); eingabeZeichnen(); };
+  $("#bSenden").onclick = abschicken;
+  $("#bEnde").onclick = rundeBeenden;
+  document.onkeydown = e => {
+    if(S.phase !== "chat") return;
+    if(e.target.tagName === "SELECT") return;
+    if(e.key === "0" || e.key === "1") tippe(e.key);
+    else if(e.key === "Backspace"){ e.preventDefault(); EINGABE = EINGABE.slice(0,-1); eingabeZeichnen(); }
+    else if(e.key === "Enter"){ e.preventDefault(); abschicken(); }
+  };
+  eingabeZeichnen();
+
+  const kanal = rundenKanal(S.runde);
+  starteSchleife(kanal,
+    () => S.tc[S.runde] || "1",                       // beim ersten Betreten: gesamten Rundenverlauf holen
+    v => { S.tc[S.runde] = v; sichern(); },
+    msgs => {
+      for(const m of msgs){
+        const e = {typ:"fremd", text:String(m), zeit:Date.now(), von:"", fuer:"", id:Math.random().toString(36).slice(2,9)};
+        logRunde().push(e); blaseZeichnen(e);
+      }
+      sichern();
+    });
+}
+
+function tippe(z){ if(EINGABE.length < 32){ EINGABE += z; eingabeZeichnen(); } }
+function eingabeZeichnen(){
+  $("#eingabeText").textContent = EINGABE;
+  $("#zaehler").textContent = EINGABE.length + " Bit";
+}
+function abschicken(){
+  if(!EINGABE) return;
+  const e = {typ:"eigen", text:EINGABE, zeit:Date.now()};
+  logRunde().push(e); sichern();
+  senden(EINGABE);
+  blaseZeichnen(e);
+  EINGABE = ""; eingabeZeichnen();
+  aufgabenZeichnen();
+}
+function aufgabenZeichnen(){
+  const gesendet = logRunde().filter(e => e.typ === "eigen").map(e => e.text);
+  const verbraucht = new Set();
+  const html = aufgaben(S.rolle, S.runde).map(a => {
+    const i = gesendet.findIndex((t,k) => !verbraucht.has(k) && t.includes(a.d));
+    const ok = i >= 0; if(ok) verbraucht.add(i);
+    return `<span class="auf ${ok?"erledigt":""}">${ok?"✓ ":""}sende <span class="bits">${a.d}</span> ${VERB[S.runde-1]} <b>${a.an}</b></span>`;
+  }).join("");
+  $("#aufgaben").innerHTML = `<b>Deine Rollenkarte ${S.rolle}, Runde ${S.runde}:</b> ${html}`;
+}
+function auswahl(wert, art, id){
+  const opt = ["", ...ROLLEN].map(r => `<option value="${r}" ${r===wert?"selected":""}>${r||"?"}</option>`).join("");
+  return `<select data-id="${id}" data-art="${art}">${opt}</select>`;
+}
+function blaseZeichnen(e){
+  const v = $("#verlauf"); if(!v) return;
+  const w = document.createElement("div");
+  w.className = e.typ === "eigen" ? "wrap-eigen" : "wrap-fremd";
+  w.innerHTML = `<div class="blase ${e.typ} bits">${esc(e.text)}</div>
+    ${e.typ === "fremd" ? `<div class="notiz">Meine Notiz: von ${auswahl(e.von,"von",e.id)} für ${auswahl(e.fuer,"fuer",e.id)}</div>` : ""}
+    <div class="meta">${uhrzeit(e.zeit)}</div>`;
+  w.querySelectorAll("select").forEach(sel => sel.onchange = () => {
+    const ziel = Object.values(S.log).flat().find(x => x.id === sel.dataset.id);
+    if(ziel){ ziel[sel.dataset.art] = sel.value; sichern(); }
+  });
+  v.appendChild(w);
+  v.scrollTop = v.scrollHeight;
+}
+
+async function rundeBeenden(){
+  if(!confirm(`Runde ${S.runde} beenden? Danach kannst du in dieser Runde nichts mehr senden.`)) return;
+  $("#bEnde").disabled = true;
+  // warten, bis alle eigenen Nachrichten wirklich gesendet sind
+  for(let i = 0; i < 50 && AUSGANG.length; i++) await sleep(200);
+  stoppeSchleife();
+  try{ await anfrage(steuerKanal(), "0", `DONE ${S.runde} ${S.rolle}`); }catch(e){}
+  S.phase = "pause"; sichern();
+  phaseAnzeigen();
+}
+
+/* ================================================================
+   SEITE 4: BESPRECHUNG NACH JEDER RUNDE
+   ================================================================ */
+function zeigePause(){
+  document.onkeydown = null;
+  const n = S.runde, b = BESPRECHUNG[n];
+  const empf = (S.log[n]||[]).filter(e => e.typ === "fremd");
+  $("#app").innerHTML = `
+  <main>
+    <div class="karte">
+      <h2>Runde ${n} beendet – setzt euch zusammen!</h2>
+      <p>Die Funkstille ist aufgehoben. Setzt euch jetzt in eurer Gruppe zusammen, besprecht die aufgetretenen Probleme und entwickelt Lösungsideen.
+      <b>Die Rollenkarten bleiben weiterhin geheim!</b></p>
+      <p class="klein">Wer hat Runde ${n} schon beendet?</p>
+      <div class="status" id="status"></div>
+    </div>
+    <div class="karte">
+      <h3>Besprecht in der Gruppe</h3>
+      <ul class="fragen">${b.fragen.map(f => `<li>${f}</li>`).join("")}</ul>
+      <button class="keinDruck" id="tippKnopf">💡 Tipp anzeigen</button>
+      <div class="tipp" id="tipp">${b.tipp}</div>
+    </div>
+    <div class="karte">
+      <h3>Deine Mitschrift aus Runde ${n}</h3>
+      ${empf.length ? `<table class="uebersicht"><tr><th>Empfangen</th><th>von?</th><th>für?</th></tr>
+        ${empf.map(e => `<tr><td class="bits">${esc(e.text)}</td><td>${e.von||"?"}</td><td>${e.fuer||"?"}</td></tr>`).join("")}</table>`
+        : `<p class="klein">Du hast in dieser Runde keine Nachrichten empfangen.</p>`}
+      <h3>Unsere Lösungsidee${n<RUNDEN ? " für die nächste Runde" : ""}</h3>
+      <textarea id="notiz" placeholder="Notiert hier eure Ideen …">${esc(S.notizen[n]||"")}</textarea>
+    </div>
+    <div class="zeile">
+      <button class="primaer" id="weiterKnopf">${n < RUNDEN ? `Runde ${n+1} starten` : "Zur Gesamtübersicht"}</button>
+    </div>
+  </main>`;
+  $("#tippKnopf").onclick = () => $("#tipp").classList.toggle("offen");
+  $("#notiz").oninput = e => { S.notizen[n] = e.target.value; sichern(); };
+  $("#weiterKnopf").onclick = () => {
+    stoppeSchleife();
+    if(n < RUNDEN){ S.runde = n + 1; S.phase = "chat"; }
+    else { S.phase = "ende"; }
+    sichern(); phaseAnzeigen();
+  };
+  starteSteuerSchleife(() => {
+    const f = STEUER.fertig[String(n)] || new Set();
+    const box = $("#status"); if(!box) return;
+    box.innerHTML = ROLLEN.map(r => `<span class="${f.has(r)?"fertig":""}">${r}: ${f.has(r)?"fertig ✓":"noch im Chat"}</span>`).join("");
+  });
+}
+
+/* ================================================================
+   SEITE 5: GESAMTÜBERSICHT + AUFLÖSUNG
+   ================================================================ */
+function zuordnen(runde, text){
+  const daten = text.length >= 8 ? text.slice(-8) : text;
+  return loesung(runde).find(l => l.d === daten) || null;
+}
+function kopfDeuten(text){
+  const k = text.length > 8 ? text.slice(0, text.length - 8) : "";
+  const name = bits => ROLLEN.find(r => ADRESSE[r] === bits) || "?";
+  if(k.length === 2) return `Kopf <span class="bits">${k}</span> → ${name(k)}`;
+  if(k.length === 4) return `Kopf <span class="bits">${k.slice(0,2)}|${k.slice(2)}</span> → ${name(k.slice(0,2))} | ${name(k.slice(2))}`;
+  return k ? `Kopf <span class="bits">${esc(k)}</span>` : "keine Adresse";
+}
+
+function zeigeUebersicht(){
+  stoppeSchleife();
+  document.onkeydown = null;
+  kopfAktualisieren();
+  let gesamt = 0, richtig = 0, teile = "";
+  for(let r = 1; r <= RUNDEN; r++){
+    const log = S.log[r] || [];
+    const eigen = log.filter(e => e.typ === "eigen");
+    const fremd = log.filter(e => e.typ === "fremd");
+    const zeilen = fremd.map(e => {
+      const l = zuordnen(r, e.text);
+      let bew = "";
+      if(l){
+        gesamt += 2;
+        const okV = e.von === l.von, okF = e.fuer === l.an;
+        richtig += (okV?1:0) + (okF?1:0);
+        bew = `<span class="${okV?"richtig":"falsch"}">${l.von} ${okV?"✓":"✗"}</span> / <span class="${okF?"richtig":"falsch"}">${l.an} ${okF?"✓":"✗"}</span>`;
+      } else bew = `<span class="klein">nicht zuzuordnen</span>`;
+      return `<tr><td class="bits">${esc(e.text)}</td><td class="klein loesung">${kopfDeuten(e.text)}</td><td>${e.von||"?"}</td><td>${e.fuer||"?"}</td><td class="loesung">${bew}</td></tr>`;
+    }).join("");
+    teile += `
+    <div class="karte">
+      <h3>Runde ${r}</h3>
+      <p><b>Gesendet:</b> ${eigen.length ? eigen.map(e => `<span class="bits">${esc(e.text)}</span>`).join(", ") : "–"}</p>
+      <p><b>Empfangen und notiert:</b></p>
+      ${fremd.length ? `<table class="uebersicht"><tr><th>Nachricht</th><th class="loesung">Aufbau (Schema A=00…D=11)</th><th>von?</th><th>für?</th><th class="loesung">Richtig: von / für</th></tr>${zeilen}</table>`
+                     : `<p class="klein">keine Nachrichten empfangen</p>`}
+      ${S.notizen[r] ? `<p><b>Eure Lösungsidee:</b><br>${esc(S.notizen[r]).replace(/\n/g,"<br>")}</p>` : ""}
+      <div class="loesung">
+        <p><b>Auflösung Runde ${r} (alle Rollenkarten):</b></p>
+        <table class="uebersicht"><tr><th>von</th><th>an</th><th>Daten</th><th>mit Adressierung [Absender|Empfänger|Daten]</th></tr>
+        ${loesung(r).map(l => `<tr><td>${l.von}</td><td>${l.an}</td><td class="bits">${l.d}</td><td>${rahmenHTML(l.von,l.an,l.d)}</td></tr>`).join("")}
+        </table>
+      </div>
+    </div>`;
+  }
+  $("#app").innerHTML = `
+  <main>
+    <div class="karte">
+      <h2>Gesamtübersicht – Teilnehmer ${S.rolle}, Gruppe „${esc(S.gruppe)}“</h2>
+      <p>Hier siehst du alle Nachrichten, die du gesendet und empfangen hast, und deine Notizen dazu.
+      Mit „Auflösung anzeigen“ werden alle Rollenkarten aufgedeckt und deine Zuordnungen geprüft.</p>
+      <div class="zeile keinDruck">
+        <button class="primaer" id="aufloesen">Auflösung anzeigen</button>
+        <button id="drucken">Drucken / als PDF speichern</button>
+      </div>
+      <div class="loesung">
+        <p style="font-size:1.2rem">Richtig zugeordnet: <b>${richtig} von ${gesamt}</b> Angaben (von/für).</p>
+        <p>Adressen im Lösungsvorschlag: ${ROLLEN.map(r => `${r} = <span class="bits">${ADRESSE[r]}</span>`).join(", ")}
+        · <span class="rahmen"><span class="abs">Absender</span> <span class="emp">Empfänger</span> <span class="dat">Daten</span></span></p>
+      </div>
+    </div>
+    ${teile}
+    <div class="zeile keinDruck"><button class="link" id="neu">Neue Gruppe / von vorn beginnen</button></div>
+  </main>`;
+  $("#aufloesen").onclick = () => {
+    const an = document.body.classList.toggle("aufgeloest");
+    $("#aufloesen").textContent = an ? "Auflösung ausblenden" : "Auflösung anzeigen";
+  };
+  $("#drucken").onclick = () => window.print();
+  $("#neu").onclick = verlassen;
+}
+
+/* ================================================================
+   LEHRKRAFT-ANSICHT  (Aufruf mit ?lehrer an der Adresse)
+   ================================================================ */
+function zeigeLehrer(){
+  $("#kopfInfo").textContent = "Lehrkraft-Ansicht";
+  let h = `<main><div class="karte"><h2>Alle Rollenkarten</h2><div class="zeile" style="align-items:flex-start">
+    ${ROLLEN.map(r => `<div style="flex:1;min-width:260px">${rollenkarteHTML(r,0)}</div>`).join("")}</div></div>`;
+  for(let r = 1; r <= RUNDEN; r++){
+    h += `<div class="karte"><h3>Runde ${r}</h3><table class="uebersicht"><tr><th>von</th><th>an</th><th>Daten</th><th>mit Adressierung</th></tr>
+      ${loesung(r).map(l => `<tr><td>${l.von}</td><td>${l.an}</td><td class="bits">${l.d}</td><td>${rahmenHTML(l.von,l.an,l.d)}</td></tr>`).join("")}</table></div>`;
+  }
+  $("#app").innerHTML = h + `<p class="klein">Adressen: ${ROLLEN.map(r => `${r} = ${ADRESSE[r]}`).join(", ")}</p></main>`;
+}
+
+/* ================================================================
+   START
+   ================================================================ */
+if(new URLSearchParams(location.search).has("lehrer")) zeigeLehrer();
+else zeigeStart();
+</script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+# Variante B: Image wird gebaut (Docker CLI oder Portainer-Stack aus Git-Repository)
+services:
+  binaerchat:
+    build: .
+    image: binaerchat:latest
+    container_name: binaerchat
+    restart: unless-stopped
+    ports:
+      - "8085:80"          # links den gewünschten Port auf dem Host eintragen
+    volumes:
+      - binaerchat-daten:/data
+
+volumes:
+  binaerchat-daten:

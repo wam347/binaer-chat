@@ -1,0 +1,18 @@
+# Variante A: Portainer > Stacks > Add stack > Web editor (ohne Image-Bau)
+# Vorher den Ordner "app" auf den Docker-Host kopieren, z. B. nach /opt/binaerchat/app
+services:
+  binaerchat:
+    image: php:8.3-apache
+    container_name: binaerchat
+    restart: unless-stopped
+    ports:
+      - "8085:80"          # links den gewünschten Port auf dem Host eintragen
+    environment:
+      - BINAERCHAT_DATEN=/data
+    volumes:
+      - /opt/binaerchat/app:/var/www/html:ro   # Pfad auf dem Host ggf. anpassen
+      - binaerchat-daten:/data
+    command: sh -c "chown www-data:www-data /data && exec apache2-foreground"
+
+volumes:
+  binaerchat-daten:
