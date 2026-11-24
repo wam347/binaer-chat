@@ -6,7 +6,7 @@ services:
     container_name: binaerchat
     restart: unless-stopped
     ports:
-      - "8085:80"          # links den gewünschten Port auf dem Host eintragen
+      - "8085:8080"          # links den gewünschten Port auf dem Host eintragen
     volumes:
       - binaerchat-daten:/data
 
